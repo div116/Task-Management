@@ -1,0 +1,70 @@
+<div class="auth-container">
+  <mat-card class="auth-card">
+    <mat-card-header>
+      <mat-card-title>
+        <div class="auth-title">
+          <mat-icon color="primary">task_alt</mat-icon>
+          <span>Sign In to Trackify</span>
+        </div>
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (error()) {
+        <div class="error-banner">
+          <mat-icon>error</mat-icon> {{ error() }}
+        </div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Email</mat-label>
+          <input matInput type="email" formControlName="email" placeholder="you@example.com" />
+          <mat-icon matPrefix>email</mat-icon>
+          @if (emailCtrl.invalid && emailCtrl.touched) {
+            <mat-error>
+              @if (emailCtrl.hasError('required')) { Email is required }
+              @else { Please enter a valid email }
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Password</mat-label>
+          <input matInput [type]="hidePassword() ? 'password' : 'text'" formControlName="password" />
+          <mat-icon matPrefix>lock</mat-icon>
+          <button type="button" mat-icon-button matSuffix (click)="hidePassword.set(!hidePassword())">
+            <mat-icon>{{ hidePassword() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+          @if (passwordCtrl.invalid && passwordCtrl.touched) {
+            <mat-error>
+              @if (passwordCtrl.hasError('required')) { Password is required }
+              @else { Minimum 6 characters required }
+            </mat-error>
+          }
+        </mat-form-field>
+
+        <button
+          mat-raised-button
+          color="primary"
+          type="submit"
+          class="full-width submit-btn"
+          [disabled]="loading()"
+        >
+          @if (loading()) {
+            <mat-spinner diameter="20" />
+          } @else {
+            Sign In
+          }
+        </button>
+      </form>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <p class="switch-link">
+        Don't have an account?
+        <a routerLink="/auth/register">Register here</a>
+      </p>
+    </mat-card-actions>
+  </mat-card>
+</div>

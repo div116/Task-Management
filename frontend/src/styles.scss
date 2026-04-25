@@ -1,0 +1,51 @@
+@use '@angular/material' as mat;
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette,
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+body {
+  color-scheme: light;
+
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+
+  margin: 0;
+  height: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: #1976d2;
+  text-decoration: none;
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.mat-mdc-snack-bar-container {
+  &.success-snack {
+    --mdc-snackbar-container-color: #388e3c;
+    --mat-snack-bar-button-color: #fff;
+    color: #fff;
+  }
+  &.error-snack {
+    --mdc-snackbar-container-color: #d32f2f;
+    --mat-snack-bar-button-color: #fff;
+    color: #fff;
+  }
+}

@@ -1,0 +1,185 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <div>
+      <h1>Welcome, {{ authService.currentUser()?.username }}!</h1>
+      <span class="role-badge role-{{ authService.currentUser()?.role }}">
+        {{ authService.currentUser()?.role | titlecase }}
+      </span>
+    </div>
+    <button mat-raised-button color="primary" routerLink="/tasks/new">
+      <mat-icon>add</mat-icon> New Task
+    </button>
+  </div>
+
+  <div class="stats-grid">
+    <mat-card class="stat-card stat-total">
+      <mat-card-content>
+        <mat-icon class="stat-icon">assignment</mat-icon>
+        <div class="stat-info">
+          <span class="stat-number">{{ tasks().length }}</span>
+          <span class="stat-label">Total Tasks</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-pending">
+      <mat-card-content>
+        <mat-icon class="stat-icon">pending</mat-icon>
+        <div class="stat-info">
+          <span class="stat-number">{{ pendingCount }}</span>
+          <span class="stat-label">Pending</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-progress">
+      <mat-card-content>
+        <mat-icon class="stat-icon">autorenew</mat-icon>
+        <div class="stat-info">
+          <span class="stat-number">{{ inProgressCount }}</span>
+          <span class="stat-label">In Progress</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card stat-completed">
+      <mat-card-content>
+        <mat-icon class="stat-icon">check_circle</mat-icon>
+        <div class="stat-info">
+          <span class="stat-number">{{ completedCount }}</span>
+          <span class="stat-label">Completed</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  @if (tasks().length > 0) {
+    <mat-card class="progress-card">
+      <mat-card-content>
+        <div class="progress-header">
+          <span>Overall Completion</span>
+          <strong>{{ completionRate }}%</strong>
+        </div>
+        <mat-progress-bar
+          mode="determinate"
+          [value]="completionRate"
+          color="primary"
+        />
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <div class="main-grid">
+    <mat-card class="recent-tasks-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>access_time</mat-icon> Recent Tasks
+        </mat-card-title>
+        <span class="spacer"></span>
+        <a mat-button routerLink="/tasks" color="primary">View All</a>
+      </mat-card-header>
+      <mat-card-content>
+        @if (loading()) {
+          <div class="loading">Loading...</div>
+        } @else if (recentTasks.length === 0) {
+          <div class="empty-state">
+            <mat-icon>inbox</mat-icon>
+            <p>No tasks yet. <a routerLink="/tasks/new">Create your first task</a></p>
+          </div>
+        } @else {
+          <div class="task-list">
+            @for (task of recentTasks; track task._id) {
+              <div class="task-item" [routerLink]="['/tasks', task._id, 'edit']">
+                <div class="task-info">
+                  <span class="task-title">{{ task.title }}</span>
+                  <div class="task-meta">
+                    <span class="priority-dot" [style.background]="getPriorityColor(task.priority)"></span>
+                    {{ task.priority | titlecase }} Priority
+                    &bull; {{ task.assignedTo?.username }}
+                  </div>
+                </div>
+                <mat-chip [color]="getStatusColor(task.status)" highlighted>
+                  {{ task.status | titlecase }}
+                </mat-chip>
+              </div>
+              <mat-divider />
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    @if (authService.isManager()) {
+      <mat-card class="team-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>groups</mat-icon> Team Overview
+          </mat-card-title>
+          <span class="spacer"></span>
+          <a mat-button routerLink="/users" color="primary">Manage Users</a>
+        </mat-card-header>
+        <mat-card-content>
+          @if (teamLeads().length === 0) {
+            <div class="empty-state">
+              <mat-icon>group_add</mat-icon>
+              <p>No team leads assigned yet.</p>
+            </div>
+          } @else {
+            @for (tl of teamLeads(); track tl._id) {
+              <div class="team-lead-item">
+                <div class="tl-header">
+                  <mat-icon color="accent">manage_accounts</mat-icon>
+                  <strong>{{ tl.username }}</strong>
+                  <span class="tl-email">{{ tl.email }}</span>
+                </div>
+                <div class="members-list">
+                  @for (member of tl.members; track member._id) {
+                    <div class="member-chip">
+                      <mat-icon class="small-icon">person</mat-icon>
+                      {{ member.username }}
+                    </div>
+                  }
+                  @if (tl.members.length === 0) {
+                    <span class="no-members">No team members yet</span>
+                  }
+                </div>
+              </div>
+              <mat-divider />
+            }
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+
+    @if (authService.isTeamLead()) {
+      <mat-card class="team-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>group</mat-icon> My Team
+          </mat-card-title>
+          <span class="spacer"></span>
+          <a mat-button routerLink="/users" color="primary">Manage Team</a>
+        </mat-card-header>
+        <mat-card-content>
+          @if (teamMembers().length === 0) {
+            <div class="empty-state">
+              <mat-icon>person_add</mat-icon>
+              <p>No team members yet.</p>
+            </div>
+          } @else {
+            @for (member of teamMembers(); track member._id) {
+              <div class="member-row">
+                <mat-icon>person</mat-icon>
+                <div>
+                  <strong>{{ member.username }}</strong>
+                  <span class="member-email">{{ member.email }}</span>
+                </div>
+              </div>
+              <mat-divider />
+            }
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+</div>

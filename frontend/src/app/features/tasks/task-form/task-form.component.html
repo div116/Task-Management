@@ -1,0 +1,125 @@
+<div class="task-form-container">
+  <div class="page-header">
+    <button mat-icon-button routerLink="/tasks">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1>{{ isEditMode() ? 'Edit Task' : 'Create New Task' }}</h1>
+  </div>
+
+  @if (fetchingTask()) {
+    <div class="loading-state">
+      <mat-spinner diameter="48" />
+      <p>Loading task...</p>
+    </div>
+  } @else {
+    <mat-card class="form-card">
+      <mat-card-content>
+        @if (error()) {
+          <div class="error-banner">
+            <mat-icon>error</mat-icon> {{ error() }}
+          </div>
+        }
+
+        <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Task Title *</mat-label>
+            <input matInput formControlName="title" placeholder="Enter task title..." />
+            <mat-hint align="end">{{ form.get('title')?.value?.length || 0 }}/100</mat-hint>
+            @if (titleCtrl.invalid && titleCtrl.touched) {
+              <mat-error>
+                @if (titleCtrl.hasError('required')) { Title is required }
+                @else if (titleCtrl.hasError('minlength')) { Minimum 3 characters }
+                @else { Maximum 100 characters }
+              </mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Description</mat-label>
+            <textarea
+              matInput
+              formControlName="description"
+              rows="4"
+              placeholder="Describe the task..."
+            ></textarea>
+            <mat-hint align="end">{{ form.get('description')?.value?.length || 0 }}/1000</mat-hint>
+            @if (descCtrl.invalid && descCtrl.touched) {
+              <mat-error>Maximum 1000 characters</mat-error>
+            }
+          </mat-form-field>
+
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="flex-field">
+              <mat-label>Status</mat-label>
+              <mat-select formControlName="status">
+                <mat-option value="pending">
+                  <mat-icon class="option-icon status-pending-icon">radio_button_unchecked</mat-icon>
+                  Pending
+                </mat-option>
+                <mat-option value="in-progress">
+                  <mat-icon class="option-icon status-progress-icon">autorenew</mat-icon>
+                  In Progress
+                </mat-option>
+                <mat-option value="completed">
+                  <mat-icon class="option-icon status-done-icon">check_circle</mat-icon>
+                  Completed
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="flex-field">
+              <mat-label>Priority</mat-label>
+              <mat-select formControlName="priority">
+                <mat-option value="low">🟢 Low</mat-option>
+                <mat-option value="medium">🟡 Medium</mat-option>
+                <mat-option value="high">🔴 High</mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <div class="form-row">
+            @if (canAssign()) {
+              <mat-form-field appearance="outline" class="flex-field">
+                <mat-label>Assign To</mat-label>
+                <mat-select formControlName="assignedTo">
+                  @for (user of assignableUsers(); track user.id || user._id) {
+                    <mat-option [value]="user.id || user._id">
+                      {{ user.username }} ({{ user.role }})
+                    </mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            }
+
+            <mat-form-field appearance="outline" class="flex-field">
+              <mat-label>Due Date</mat-label>
+              <input matInput [matDatepicker]="picker" formControlName="dueDate" />
+              <mat-datepicker-toggle matIconSuffix [for]="picker" />
+              <mat-datepicker #picker />
+            </mat-form-field>
+          </div>
+
+          <div class="form-actions">
+            <button mat-stroked-button type="button" routerLink="/tasks">
+              Cancel
+            </button>
+            <button
+              mat-raised-button
+              color="primary"
+              type="submit"
+              [disabled]="loading()"
+            >
+              @if (loading()) {
+                <mat-spinner diameter="20" />
+              } @else {
+                <ng-container>
+                  {{ isEditMode() ? 'Update Task' : 'Create Task' }}
+                </ng-container>
+              }
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

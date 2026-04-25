@@ -1,0 +1,285 @@
+<div class="user-list-container">
+  <div class="page-header">
+    <h1>
+      <mat-icon>group</mat-icon>
+      {{ authService.isManager() ? 'Team Management' : 'My Team' }}
+    </h1>
+    <button mat-raised-button color="primary" (click)="toggleCreateForm()">
+      <mat-icon>{{ showCreateForm() ? 'close' : 'person_add' }}</mat-icon>
+      {{ showCreateForm() ? 'Cancel' : 'Add User' }}
+    </button>
+  </div>
+
+  @if (showCreateForm()) {
+    <mat-card class="create-form-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>person_add</mat-icon> Create New User
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (createError()) {
+          <div class="error-banner">
+            <mat-icon>error</mat-icon> {{ createError() }}
+          </div>
+        }
+
+        <form [formGroup]="createForm" (ngSubmit)="onCreateUser()" novalidate>
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="flex-field">
+              <mat-label>Username</mat-label>
+              <input matInput formControlName="username" />
+              <mat-icon matPrefix>person</mat-icon>
+              @if (usernameCtrl.invalid && usernameCtrl.touched) {
+                <mat-error>
+                  @if (usernameCtrl.hasError('required')) { Required }
+                  @else if (usernameCtrl.hasError('minlength')) { Min 3 characters }
+                  @else { Max 30 characters }
+                </mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="flex-field">
+              <mat-label>Email</mat-label>
+              <input matInput type="email" formControlName="email" />
+              <mat-icon matPrefix>email</mat-icon>
+              @if (emailCtrl.invalid && emailCtrl.touched) {
+                <mat-error>
+                  @if (emailCtrl.hasError('required')) { Required }
+                  @else { Invalid email }
+                </mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="flex-field">
+              <mat-label>Password</mat-label>
+              <input matInput type="password" formControlName="password" />
+              <mat-icon matPrefix>lock</mat-icon>
+              @if (passwordCtrl.invalid && passwordCtrl.touched) {
+                <mat-error>
+                  @if (passwordCtrl.hasError('required')) { Required }
+                  @else { Min 6 characters }
+                </mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="flex-field">
+              <mat-label>Role</mat-label>
+              <mat-select formControlName="role">
+                @for (role of availableRoles; track role) {
+                  <mat-option [value]="role">{{ role | titlecase }}</mat-option>
+                }
+              </mat-select>
+            </mat-form-field>
+
+            @if (authService.isManager() && createForm.get('role')?.value === 'employee') {
+              <mat-form-field appearance="outline" class="flex-field">
+                <mat-label>Assign to Team Lead</mat-label>
+                <mat-select formControlName="teamLeadId">
+                  <mat-option value="">No Team Lead</mat-option>
+                  @for (tl of teamLeads(); track tl._id) {
+                    <mat-option [value]="tl._id">{{ tl.username }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            }
+          </div>
+
+          <div class="form-actions">
+            <button mat-stroked-button type="button" (click)="toggleCreateForm()">Cancel</button>
+            <button mat-raised-button color="primary" type="submit" [disabled]="createLoading()">
+              @if (createLoading()) {
+                <mat-spinner diameter="20" />
+              } @else {
+                <ng-container>
+                Create User
+                </ng-container>
+              }
+            </button>
+          </div>
+        </form>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (authService.isManager()) {
+    @if (loading()) {
+      <div class="loading-state">
+        <mat-spinner diameter="48" />
+        <p>Loading team structure...</p>
+      </div>
+    } @else if (teamLeads().length === 0) {
+      <div class="empty-state">
+        <mat-icon>groups</mat-icon>
+        <h3>No Team Leads Yet</h3>
+        <p>Create team leads to start managing your organization.</p>
+      </div>
+    } @else {
+      <mat-accordion multi="true">
+        @for (tl of teamLeads(); track tl._id) {
+          <mat-expansion-panel class="team-panel">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <div class="panel-title">
+                  <mat-icon color="accent">manage_accounts</mat-icon>
+                  <strong>{{ tl.username }}</strong>
+                  <span class="email">{{ tl.email }}</span>
+                  <mat-chip class="role-chip role-teamlead">Team Lead</mat-chip>
+                </div>
+              </mat-panel-title>
+              <mat-panel-description>
+                {{ tl.members.length }} member{{ tl.members.length !== 1 ? 's' : '' }}
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+
+            @if (tl.members.length === 0) {
+              <div class="no-members">
+                <mat-icon>person_off</mat-icon>
+                No team members assigned yet.
+              </div>
+            } @else {
+              <div class="members-grid">
+                @for (member of tl.members; track member._id) {
+                  <mat-card class="member-card">
+                    <mat-card-content>
+                      <div class="member-top-row">
+                        <div class="member-info">
+                          <mat-icon color="primary">person</mat-icon>
+                          <div>
+                            <strong>{{ member.username }}</strong>
+                            <span class="member-email">{{ member.email }}</span>
+                          </div>
+                        </div>
+                        <mat-chip class="role-chip role-employee">Employee</mat-chip>
+                      </div>
+                      <div class="member-actions">
+                        <button mat-stroked-button color="primary" class="action-btn"
+                          [disabled]="assigningUserId() === (member._id || member.id)"
+                          (click)="toggleReassign((member._id || member.id)!)">
+                          {{ reassignOpenId() === (member._id || member.id) ? 'Cancel' : 'Reassign' }}
+                        </button>
+                        <button mat-stroked-button color="warn" class="action-btn"
+                          [disabled]="assigningUserId() === (member._id || member.id)"
+                          (click)="onUnassignEmployee((member._id || member.id)!)">
+                          @if (assigningUserId() === (member._id || member.id)) {
+                            <mat-spinner diameter="16" />
+                          } @else {
+                            Unassign
+                          }
+                        </button>
+                      </div>
+                      @if (reassignOpenId() === (member._id || member.id)) {
+                        <div class="assign-row">
+                          <mat-form-field appearance="outline" class="assign-select">
+                            <mat-label>Move to Team Lead</mat-label>
+                            <mat-select
+                              [value]="selectedTeamLeadIds()[(member._id || member.id) || '']"
+                              (selectionChange)="onSelectTeamLead((member._id || member.id)!, $event.value)">
+                              @for (lead of teamLeads(); track lead._id) {
+                                @if (lead._id !== tl._id) {
+                                  <mat-option [value]="lead._id">{{ lead.username }}</mat-option>
+                                }
+                              }
+                            </mat-select>
+                          </mat-form-field>
+                          <button mat-raised-button color="accent"
+                            [disabled]="assigningUserId() === (member._id || member.id)"
+                            (click)="onReassignEmployee((member._id || member.id)!)">
+                            @if (assigningUserId() === (member._id || member.id)) {
+                              <mat-spinner diameter="16" />
+                            } @else {
+                              <mat-icon>how_to_reg</mat-icon> Save
+                            }
+                          </button>
+                        </div>
+                      }
+                    </mat-card-content>
+                  </mat-card>
+                }
+              </div>
+            }
+          </mat-expansion-panel>
+        }
+      </mat-accordion>
+    }
+  }
+
+  @if (authService.isManager() && !loading()) {
+    @if (unassignedEmployees().length > 0) {
+      <div class="section-header">
+        <mat-icon color="warn">person_off</mat-icon>
+        <h2>Unassigned Employees <span class="count-badge">{{ unassignedEmployees().length }}</span></h2>
+        <span class="section-hint">These users registered on their own and need to be assigned to a team lead.</span>
+      </div>
+      <div class="members-grid">
+        @for (emp of unassignedEmployees(); track (emp._id || emp.id)) {
+          <mat-card class="member-card unassigned-card">
+            <mat-card-content>
+              <div class="member-info">
+                <mat-icon color="warn">person_off</mat-icon>
+                <div>
+                  <strong>{{ emp.username }}</strong>
+                  <span class="member-email">{{ emp.email }}</span>
+                </div>
+              </div>
+              <mat-chip class="role-chip role-employee">Employee</mat-chip>
+              <div class="assign-row">
+                <mat-form-field appearance="outline" class="assign-select">
+                  <mat-label>Assign to Team Lead</mat-label>
+                  <mat-select
+                    [value]="selectedTeamLeadIds()[(emp._id || emp.id) || '']"
+                    (selectionChange)="onSelectTeamLead((emp._id || emp.id)!, $event.value)">
+                    @for (tl of teamLeads(); track tl._id) {
+                      <mat-option [value]="tl._id">{{ tl.username }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+                <button mat-raised-button color="accent"
+                  [disabled]="assigningUserId() === (emp._id || emp.id)"
+                  (click)="onAssignEmployee((emp._id || emp.id)!)">
+                  @if (assigningUserId() === (emp._id || emp.id)) {
+                    <mat-spinner diameter="18" />
+                  } @else {
+                    Assign
+                  }
+                </button>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+  }
+
+  @if (authService.isTeamLead()) {
+    @if (loading()) {
+      <div class="loading-state">
+        <mat-spinner diameter="48" />
+        <p>Loading team members...</p>
+      </div>
+    } @else if (teamMembers().length === 0) {
+      <div class="empty-state">
+        <mat-icon>person_add</mat-icon>
+        <h3>No Team Members Yet</h3>
+        <p>Add employees to your team to start assigning tasks.</p>
+      </div>
+    } @else {
+      <div class="members-grid">
+        @for (member of teamMembers(); track member._id) {
+          <mat-card class="member-card">
+            <mat-card-content>
+              <div class="member-info">
+                <mat-icon color="primary">person</mat-icon>
+                <div>
+                  <strong>{{ member.username }}</strong>
+                  <span class="member-email">{{ member.email }}</span>
+                </div>
+              </div>
+              <mat-chip class="role-chip role-employee">Employee</mat-chip>
+            </mat-card-content>
+          </mat-card>
+        }
+      </div>
+    }
+  }
+</div>
